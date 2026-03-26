@@ -1,0 +1,15 @@
+---
+pelican_base_packages:
+  - curl
+  - tar
+  - unzip
+  - git
+  - policycoreutils-python-utils
+
+pelican_firewall_ports:
+  - "80/tcp"
+  - "443/tcp"
+
+pelican_selinux_booleans:
+  - httpd_can_network_connect
+  - httpd_unified

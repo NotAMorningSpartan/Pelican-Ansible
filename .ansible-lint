@@ -1,0 +1,26 @@
+---
+# Ansible-lint configuration for pelican-ansible
+
+# Enforce these rules
+enable_list:
+  - yaml[truthy]
+  - name[casing]
+
+# Skip rules that conflict with project patterns
+skip_list:
+  # command tasks with creates/removes are intentionally idempotent
+  - command-instead-of-module
+  # Some tasks legitimately need changed_when: false
+  - no-changed-when
+  # We use FQCNs already but some built-ins trigger this
+  - fqcn
+
+# Exclude test/validation playbooks from strict linting
+exclude_paths:
+  - panel/tests/
+  - wings/tests/
+
+# Treat warnings as non-fatal
+warn_list:
+  - experimental
+  - role-name

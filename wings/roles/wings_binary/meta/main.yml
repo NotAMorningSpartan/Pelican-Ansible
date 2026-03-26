@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  role_name: wings_binary
+  description: Wings daemon binary download and systemd setup
+  min_ansible_version: "2.16"
+  platforms:
+    - name: EL
+      versions:
+        - "10"
+
+dependencies: []

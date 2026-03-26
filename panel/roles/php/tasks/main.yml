@@ -1,0 +1,31 @@
+---
+- name: Install Remi repository for EL10
+  ansible.builtin.dnf:
+    name: "https://rpms.remirepo.net/enterprise/remi-release-10.rpm"
+    state: present
+    disable_gpg_check: true
+
+- name: Enable Remi PHP {{ pelican_php_version }} module stream
+  ansible.builtin.command:
+    cmd: "dnf module enable php:remi-{{ pelican_php_version }} -y"
+    creates: "/etc/dnf/modules.d/php.module"
+
+- name: Install PHP and required extensions
+  ansible.builtin.dnf:
+    name: "{{ ['php'] + pelican_php_extensions }}"
+    state: present
+
+- name: Template PHP-FPM www.conf pool configuration
+  ansible.builtin.template:
+    src: www.conf.j2
+    dest: /etc/php-fpm.d/www.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart php-fpm
+
+- name: Ensure php-fpm service is enabled and started
+  ansible.builtin.systemd_service:
+    name: php-fpm
+    state: started
+    enabled: true

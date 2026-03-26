@@ -1,0 +1,6 @@
+---
+wings_version: "latest"
+wings_architecture: "amd64"
+wings_binary_path: "/usr/local/bin/wings"
+wings_config_dir: "/etc/pelican"
+wings_pid_dir: "/var/run/wings"

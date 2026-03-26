@@ -1,0 +1,17 @@
+---
+pelican_php_version: "8.4"
+
+pelican_web_user: "nginx"
+
+pelican_php_extensions:
+  - php-gd
+  - php-mysqlnd
+  - php-mbstring
+  - php-bcmath
+  - php-xml
+  - php-curl
+  - php-zip
+  - php-intl
+  - php-sqlite3
+  - php-fpm
+  - php-cli

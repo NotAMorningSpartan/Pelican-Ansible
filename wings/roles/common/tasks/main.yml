@@ -1,0 +1,25 @@
+---
+- name: Install base packages
+  ansible.builtin.dnf:
+    name: "{{ wings_base_packages }}"
+    state: present
+
+- name: Set SELinux boolean for Docker cgroup management
+  ansible.posix.seboolean:
+    name: container_manage_cgroup
+    state: true
+    persistent: true
+
+- name: Ensure firewalld service is running and enabled
+  ansible.builtin.systemd_service:
+    name: firewalld
+    state: started
+    enabled: true
+
+- name: Open firewall ports for Wings
+  ansible.posix.firewalld:
+    port: "{{ item }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  loop: "{{ wings_firewall_ports }}"

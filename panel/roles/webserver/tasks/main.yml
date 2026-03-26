@@ -1,0 +1,8 @@
+---
+- name: Include Nginx tasks
+  ansible.builtin.include_tasks: nginx.yml
+  when: pelican_webserver == "nginx"
+
+- name: Include Caddy tasks
+  ansible.builtin.include_tasks: caddy.yml
+  when: pelican_webserver == "caddy"

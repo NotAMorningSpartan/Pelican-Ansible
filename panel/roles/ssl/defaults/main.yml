@@ -1,0 +1,6 @@
+---
+pelican_ssl_enabled: true
+pelican_ssl_provider: "certbot"
+pelican_ssl_email: "admin@example.com"
+pelican_domain: "panel.example.com"
+pelican_webserver: "nginx"

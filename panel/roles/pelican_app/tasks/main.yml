@@ -1,0 +1,73 @@
+---
+- name: Create Pelican install directory
+  ansible.builtin.file:
+    path: "{{ pelican_install_dir }}"
+    state: directory
+    owner: "{{ pelican_web_user }}"
+    group: "{{ pelican_web_user }}"
+    mode: "0755"
+
+- name: Set Pelican download URL
+  ansible.builtin.set_fact:
+    pelican_tarball_url: >-
+      {{ (pelican_app_version == 'latest')
+         | ternary(
+             'https://github.com/pelican-dev/panel/releases/latest/download/panel.tar.gz',
+             'https://github.com/pelican-dev/panel/releases/download/v' ~ pelican_app_version ~ '/panel.tar.gz'
+           ) }}
+
+- name: Download and extract Pelican release tarball
+  ansible.builtin.unarchive:
+    src: "{{ pelican_tarball_url }}"
+    dest: "{{ pelican_install_dir }}"
+    remote_src: true
+    creates: "{{ pelican_install_dir }}/artisan"
+
+- name: Install Composer dependencies
+  ansible.builtin.command:
+    cmd: "composer install --no-dev --optimize-autoloader"
+    chdir: "{{ pelican_install_dir }}"
+    creates: "{{ pelican_install_dir }}/vendor/autoload.php"
+  environment:
+    COMPOSER_ALLOW_SUPERUSER: "1"
+
+- name: Run Pelican environment setup
+  ansible.builtin.command:
+    cmd: "php artisan p:environment:setup"
+    chdir: "{{ pelican_install_dir }}"
+    creates: "{{ pelican_install_dir }}/.env"
+
+- name: Read APP_KEY from .env file
+  ansible.builtin.command:
+    cmd: "grep '^APP_KEY=' {{ pelican_install_dir }}/.env"
+  register: pelican_app_key
+  changed_when: false
+
+- name: Display APP_KEY backup reminder
+  ansible.builtin.debug:
+    msg: >-
+      IMPORTANT: Back up your APP_KEY immediately!
+      {{ pelican_app_key.stdout }}
+      Loss of this key means all encrypted data is irrecoverable.
+
+- name: Set permissions on storage directory
+  ansible.builtin.file:
+    path: "{{ pelican_install_dir }}/storage"
+    state: directory
+    recurse: true
+    mode: "0755"
+
+- name: Set permissions on bootstrap/cache directory
+  ansible.builtin.file:
+    path: "{{ pelican_install_dir }}/bootstrap/cache"
+    state: directory
+    recurse: true
+    mode: "0755"
+
+- name: Set ownership on Pelican install directory
+  ansible.builtin.file:
+    path: "{{ pelican_install_dir }}"
+    state: directory
+    recurse: true
+    owner: "{{ pelican_web_user }}"
+    group: "{{ pelican_web_user }}"

@@ -1,0 +1,14 @@
+---
+- name: Install Pelican Wings
+  hosts: all
+  become: true
+
+  roles:
+    - role: common
+
+    - role: docker
+
+    - role: ssl
+      when: wings_ssl_enabled | default(true)
+
+    - role: wings_binary

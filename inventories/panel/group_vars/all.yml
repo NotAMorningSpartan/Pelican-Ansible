@@ -1,0 +1,26 @@
+---
+# ── PHP ──
+# pelican_php_version: "8.4"
+
+# ── Web Server ──
+# pelican_webserver: "nginx"
+# pelican_domain: "panel.example.com"
+# pelican_ssl_enabled: true
+# pelican_ssl_email: "admin@example.com"
+# pelican_ssl_provider: "certbot"
+
+# ── Database ──
+# pelican_db_engine: "sqlite"
+# pelican_db_name: "pelican"
+# pelican_db_user: "pelican"
+# pelican_db_password: "CHANGE_ME"  # Vault-encrypt in production
+# pelican_db_host: "127.0.0.1"
+# pelican_db_port: 3306
+
+# ── Redis ──
+# pelican_redis_enabled: false
+
+# ── Pelican App ──
+# pelican_install_dir: "/var/www/pelican"
+# pelican_app_version: "latest"
+# pelican_web_user: "nginx"

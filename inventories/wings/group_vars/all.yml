@@ -1,0 +1,24 @@
+---
+# ── Wings ──
+# wings_version: "latest"
+# wings_architecture: "amd64"
+# wings_config_dir: "/etc/pelican"
+# wings_pid_dir: "/var/run/wings"
+# wings_binary_path: "/usr/local/bin/wings"
+
+# ── Docker ──
+# wings_docker_edition: "ce"
+# wings_docker_channel: "stable"
+# wings_docker_enable_swap: false
+
+# ── SSL ──
+# wings_ssl_enabled: true
+# wings_ssl_domain: "node1.example.com"
+# wings_ssl_email: "admin@example.com"
+# wings_ssl_method: "standalone"
+
+# ── Firewall ──
+# wings_firewall_ports:
+#   - "8080/tcp"
+#   - "2022/tcp"
+#   - "443/tcp"

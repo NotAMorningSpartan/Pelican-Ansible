@@ -1,0 +1,43 @@
+---
+- name: Install OpenSSL and cryptography library
+  ansible.builtin.dnf:
+    name:
+      - openssl
+      - python3-cryptography
+    state: present
+
+- name: Ensure SSL certificate directory exists
+  ansible.builtin.file:
+    path: /etc/pki/tls/certs
+    state: directory
+    mode: "0755"
+
+- name: Ensure SSL private key directory exists
+  ansible.builtin.file:
+    path: /etc/pki/tls/private
+    state: directory
+    mode: "0700"
+
+- name: Generate self-signed SSL private key
+  ansible.builtin.command:
+    cmd: >-
+      openssl genrsa
+      -out /etc/pki/tls/private/pelican.key 4096
+    creates: /etc/pki/tls/private/pelican.key
+
+- name: Set private key permissions
+  ansible.builtin.file:
+    path: /etc/pki/tls/private/pelican.key
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Generate self-signed SSL certificate
+  ansible.builtin.command:
+    cmd: >-
+      openssl req -new -x509
+      -key /etc/pki/tls/private/pelican.key
+      -out /etc/pki/tls/certs/pelican.crt
+      -days 365
+      -subj "/CN={{ pelican_domain }}"
+    creates: /etc/pki/tls/certs/pelican.crt

@@ -1,0 +1,8 @@
+---
+- name: Include certbot SSL tasks
+  ansible.builtin.include_tasks: certbot.yml
+  when: pelican_ssl_provider == "certbot"
+
+- name: Include self-signed SSL tasks
+  ansible.builtin.include_tasks: self_signed.yml
+  when: pelican_ssl_provider == "self_signed"

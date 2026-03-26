@@ -1,0 +1,24 @@
+---
+- name: Install Pelican Panel
+  hosts: all
+  become: true
+
+  roles:
+    - role: common
+
+    - role: php
+
+    - role: composer
+
+    - role: database
+      when: pelican_db_engine != "sqlite"
+
+    - role: redis
+      when: pelican_redis_enabled | default(false)
+
+    - role: ssl
+      when: pelican_ssl_enabled | default(true)
+
+    - role: webserver
+
+    - role: pelican_app

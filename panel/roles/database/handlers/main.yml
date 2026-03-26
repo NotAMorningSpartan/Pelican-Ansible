@@ -1,0 +1,15 @@
+---
+- name: Restart mysqld
+  ansible.builtin.systemd_service:
+    name: mysqld
+    state: restarted
+
+- name: Restart mariadb
+  ansible.builtin.systemd_service:
+    name: mariadb
+    state: restarted
+
+- name: Restart postgresql
+  ansible.builtin.systemd_service:
+    name: postgresql
+    state: restarted

@@ -1,0 +1,21 @@
+# {{ ansible_managed }}
+# Redis configuration for Pelican Panel
+
+bind {{ pelican_redis_bind }}
+port {{ pelican_redis_port }}
+
+protected-mode yes
+daemonize no
+supervised systemd
+
+loglevel notice
+logfile /var/log/redis/redis.log
+
+databases 16
+
+save 900 1
+save 300 10
+save 60 10000
+
+dbfilename dump.rdb
+dir /var/lib/redis

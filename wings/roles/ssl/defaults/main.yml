@@ -1,0 +1,5 @@
+---
+wings_ssl_enabled: true
+wings_ssl_domain: "node1.example.com"
+wings_ssl_email: "admin@example.com"
+wings_ssl_method: "standalone"

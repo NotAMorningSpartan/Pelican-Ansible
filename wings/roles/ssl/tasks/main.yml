@@ -1,0 +1,36 @@
+---
+- name: Install certbot
+  ansible.builtin.dnf:
+    name: certbot
+    state: present
+
+- name: Request SSL certificate (standalone)
+  ansible.builtin.command:
+    cmd: >-
+      certbot certonly --standalone
+      -d {{ wings_ssl_domain }}
+      --non-interactive
+      --agree-tos
+      -m {{ wings_ssl_email }}
+    creates: "/etc/letsencrypt/live/{{ wings_ssl_domain }}/fullchain.pem"
+  when: wings_ssl_method == "standalone"
+
+- name: Request SSL certificate (DNS challenge)
+  ansible.builtin.command:
+    cmd: >-
+      certbot certonly
+      -d {{ wings_ssl_domain }}
+      --manual
+      --preferred-challenges dns
+      --non-interactive
+      --agree-tos
+      -m {{ wings_ssl_email }}
+    creates: "/etc/letsencrypt/live/{{ wings_ssl_domain }}/fullchain.pem"
+  when: wings_ssl_method == "dns"
+
+- name: Create cron job for certbot renewal
+  ansible.builtin.cron:
+    name: "Certbot automatic renewal for Wings"
+    minute: "0"
+    hour: "3"
+    job: "certbot renew --quiet --deploy-hook 'systemctl restart wings'"

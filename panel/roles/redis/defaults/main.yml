@@ -1,0 +1,4 @@
+---
+pelican_redis_enabled: false
+pelican_redis_bind: "127.0.0.1"
+pelican_redis_port: 6379
