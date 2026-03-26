@@ -1,0 +1,126 @@
+---
+# Pelican Panel Update — follows official manual update procedure
+# https://pelican.dev/docs/panel/update/
+
+- name: Gather date/time facts for backup timestamp
+  ansible.builtin.setup:
+    filter: ansible_date_time
+
+- name: Run pre-update backup
+  ansible.builtin.include_tasks: backup.yml
+
+- name: Set Pelican download URL for update
+  ansible.builtin.set_fact:
+    pelican_tarball_url: >-
+      {{ (pelican_app_version == 'latest')
+         | ternary(
+             'https://github.com/pelican-dev/panel/releases/latest/download/panel.tar.gz',
+             'https://github.com/pelican-dev/panel/releases/download/v' ~ pelican_app_version ~ '/panel.tar.gz'
+           ) }}
+
+- name: Enter maintenance mode
+  ansible.builtin.command:
+    cmd: "php artisan down"
+    chdir: "{{ pelican_install_dir }}"
+  register: maintenance_on
+  changed_when: true
+
+- name: Perform update steps
+  block:
+    - name: Download and extract new Pelican release
+      ansible.builtin.unarchive:
+        src: "{{ pelican_tarball_url }}"
+        dest: "{{ pelican_install_dir }}"
+        remote_src: true
+
+    - name: Fix permissions on storage directory
+      ansible.builtin.file:
+        path: "{{ pelican_install_dir }}/storage"
+        state: directory
+        recurse: true
+        mode: "0755"
+
+    - name: Fix permissions on bootstrap/cache directory
+      ansible.builtin.file:
+        path: "{{ pelican_install_dir }}/bootstrap/cache"
+        state: directory
+        recurse: true
+        mode: "0755"
+
+    - name: Install Composer dependencies
+      ansible.builtin.command:
+        cmd: "/usr/local/bin/composer install --no-dev --optimize-autoloader"
+        chdir: "{{ pelican_install_dir }}"
+      environment:
+        COMPOSER_ALLOW_SUPERUSER: "1"
+
+    - name: Create storage symlinks
+      ansible.builtin.command:
+        cmd: "php artisan storage:link"
+        chdir: "{{ pelican_install_dir }}"
+      register: storage_link
+      changed_when: "'already exists' not in storage_link.stdout"
+      failed_when: false
+
+    - name: Clear application caches
+      ansible.builtin.command:
+        cmd: "php artisan optimize:clear"
+        chdir: "{{ pelican_install_dir }}"
+
+    - name: Rebuild optimized caches
+      ansible.builtin.command:
+        cmd: "php artisan filament:optimize"
+        chdir: "{{ pelican_install_dir }}"
+
+    - name: Run database migrations
+      ansible.builtin.command:
+        cmd: "php artisan migrate --seed --force"
+        chdir: "{{ pelican_install_dir }}"
+
+    - name: Set file ownership
+      ansible.builtin.file:
+        path: "{{ pelican_install_dir }}"
+        state: directory
+        recurse: true
+        owner: "{{ pelican_web_user }}"
+        group: "{{ pelican_web_user }}"
+
+    - name: Restart queue workers
+      ansible.builtin.command:
+        cmd: "php artisan queue:restart"
+        chdir: "{{ pelican_install_dir }}"
+      changed_when: true
+
+  rescue:
+    - name: "RESCUE: Exit maintenance mode after failure"
+      ansible.builtin.command:
+        cmd: "php artisan up"
+        chdir: "{{ pelican_install_dir }}"
+      changed_when: true
+
+    - name: "RESCUE: Fail with original error"
+      ansible.builtin.fail:
+        msg: >-
+          Panel update failed. Maintenance mode has been disabled.
+          A pre-update backup is available at
+          {{ pelican_install_dir }}/backups/{{ pelican_backup_timestamp }}/
+
+- name: Exit maintenance mode
+  ansible.builtin.command:
+    cmd: "php artisan up"
+    chdir: "{{ pelican_install_dir }}"
+  changed_when: true
+
+- name: Get Pelican version
+  ansible.builtin.command:
+    cmd: "php artisan about --json"
+    chdir: "{{ pelican_install_dir }}"
+  register: pelican_about
+  changed_when: false
+  failed_when: false
+
+- name: Display update success
+  ansible.builtin.debug:
+    msg: >-
+      Pelican Panel updated successfully.
+      Backup available at: {{ pelican_install_dir }}/backups/{{ pelican_backup_timestamp }}/

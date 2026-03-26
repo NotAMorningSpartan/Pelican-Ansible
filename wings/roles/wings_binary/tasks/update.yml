@@ -1,0 +1,55 @@
+---
+# Pelican Wings Update — follows official manual update procedure
+# https://pelican.dev/docs/wings/update/
+
+- name: Set Wings download URL for update
+  ansible.builtin.set_fact:
+    wings_download_url: >-
+      {{ (wings_version == 'latest')
+         | ternary(
+             'https://github.com/pelican-dev/wings/releases/latest/download/wings_linux_' ~ wings_architecture,
+             'https://github.com/pelican-dev/wings/releases/download/v' ~ wings_version ~ '/wings_linux_' ~ wings_architecture
+           ) }}
+
+- name: Back up current Wings binary
+  ansible.builtin.copy:
+    src: "{{ wings_binary_path }}"
+    dest: "{{ wings_binary_path }}.bak"
+    remote_src: true
+    mode: "0755"
+
+- name: Stop Wings service
+  ansible.builtin.systemd_service:
+    name: wings
+    state: stopped
+
+- name: Download updated Wings binary
+  ansible.builtin.get_url:
+    url: "{{ wings_download_url }}"
+    dest: "{{ wings_binary_path }}"
+    mode: "0755"
+    force: true
+
+- name: Start Wings service
+  ansible.builtin.systemd_service:
+    name: wings
+    state: started
+
+- name: Verify Wings service is running
+  ansible.builtin.command:
+    cmd: "systemctl is-active wings"
+  register: wings_status
+  changed_when: false
+
+- name: Fail if Wings did not start
+  ansible.builtin.fail:
+    msg: >-
+      Wings failed to start after update. The previous binary has been
+      saved to {{ wings_binary_path }}.bak — restore it with:
+      cp {{ wings_binary_path }}.bak {{ wings_binary_path }} && systemctl restart wings
+  when: wings_status.stdout != "active"
+
+- name: Display update success
+  ansible.builtin.debug:
+    msg: >-
+      Wings updated successfully. Previous binary backed up to {{ wings_binary_path }}.bak

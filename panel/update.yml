@@ -1,0 +1,23 @@
+---
+- name: Update Pelican Panel
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars_files:
+    - roles/pelican_app/defaults/main.yml
+    - roles/database/defaults/main.yml
+
+  tasks:
+    - name: Verify Pelican is installed
+      ansible.builtin.stat:
+        path: "{{ pelican_install_dir }}/artisan"
+      register: pelican_check
+
+    - name: Fail if Pelican is not installed
+      ansible.builtin.fail:
+        msg: "Pelican Panel is not installed at {{ pelican_install_dir }}. Run site.yml first."
+      when: not pelican_check.stat.exists
+
+    - name: Include update tasks
+      ansible.builtin.include_tasks: roles/pelican_app/tasks/update.yml

@@ -1,0 +1,80 @@
+---
+- name: Set backup timestamp
+  ansible.builtin.set_fact:
+    pelican_backup_timestamp: "{{ ansible_date_time.iso8601_basic_short }}"
+
+- name: Create backup directory
+  ansible.builtin.file:
+    path: "{{ pelican_install_dir }}/backups/{{ pelican_backup_timestamp }}"
+    state: directory
+    owner: "{{ pelican_web_user }}"
+    group: "{{ pelican_web_user }}"
+    mode: "0750"
+
+- name: Back up .env file
+  ansible.builtin.copy:
+    src: "{{ pelican_install_dir }}/.env"
+    dest: "{{ pelican_install_dir }}/backups/{{ pelican_backup_timestamp }}/.env"
+    remote_src: true
+    owner: "{{ pelican_web_user }}"
+    group: "{{ pelican_web_user }}"
+    mode: "0640"
+
+- name: Back up SQLite database
+  ansible.builtin.copy:
+    src: "{{ pelican_install_dir }}/database/database.sqlite"
+    dest: "{{ pelican_install_dir }}/backups/{{ pelican_backup_timestamp }}/database.sqlite"
+    remote_src: true
+  when: pelican_db_engine | default('sqlite') == "sqlite"
+  failed_when: false
+
+- name: Back up MySQL/MariaDB database
+  ansible.builtin.command:
+    cmd: >-
+      mysqldump
+      -u {{ pelican_db_user }}
+      -p{{ pelican_db_password }}
+      -h {{ pelican_db_host }}
+      {{ pelican_db_name }}
+  register: mysql_dump
+  changed_when: false
+  when: pelican_db_engine | default('sqlite') in ["mysql", "mariadb"]
+  no_log: true
+
+- name: Write MySQL/MariaDB dump to file
+  ansible.builtin.copy:
+    content: "{{ mysql_dump.stdout }}"
+    dest: "{{ pelican_install_dir }}/backups/{{ pelican_backup_timestamp }}/{{ pelican_db_name }}.sql"
+    owner: "{{ pelican_web_user }}"
+    group: "{{ pelican_web_user }}"
+    mode: "0640"
+  when: pelican_db_engine | default('sqlite') in ["mysql", "mariadb"]
+  no_log: true
+
+- name: Back up PostgreSQL database
+  ansible.builtin.command:
+    cmd: >-
+      pg_dump
+      -U {{ pelican_db_user }}
+      -h {{ pelican_db_host }}
+      {{ pelican_db_name }}
+  register: pg_dump
+  changed_when: false
+  when: pelican_db_engine | default('sqlite') == "postgresql"
+  environment:
+    PGPASSWORD: "{{ pelican_db_password }}"
+  no_log: true
+
+- name: Write PostgreSQL dump to file
+  ansible.builtin.copy:
+    content: "{{ pg_dump.stdout }}"
+    dest: "{{ pelican_install_dir }}/backups/{{ pelican_backup_timestamp }}/{{ pelican_db_name }}.sql"
+    owner: "{{ pelican_web_user }}"
+    group: "{{ pelican_web_user }}"
+    mode: "0640"
+  when: pelican_db_engine | default('sqlite') == "postgresql"
+  no_log: true
+
+- name: Display backup location
+  ansible.builtin.debug:
+    msg: "Pre-update backup saved to {{ pelican_install_dir }}/backups/{{ pelican_backup_timestamp }}/"
