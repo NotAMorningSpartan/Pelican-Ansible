@@ -31,10 +31,15 @@
   notify: Reload nginx
 
 - name: Set SELinux file context on Pelican install directory
-  ansible.posix.sefcontext:
-    target: "{{ pelican_install_dir }}(/.*)?"
-    setype: httpd_sys_rw_content_t
-    state: present
+  ansible.builtin.command:
+    cmd: >-
+      semanage fcontext -a -t httpd_sys_rw_content_t
+      "{{ pelican_install_dir }}(/.*)?"
+  register: semanage_result
+  changed_when: semanage_result.rc == 0
+  failed_when:
+    - semanage_result.rc != 0
+    - "'already defined' not in semanage_result.stderr"
 
 - name: Apply SELinux file context with restorecon
   ansible.builtin.command:
