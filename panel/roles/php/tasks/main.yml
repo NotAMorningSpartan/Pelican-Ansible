@@ -1,4 +1,10 @@
 ---
+- name: Install EPEL repository (required by Remi)
+  ansible.builtin.dnf:
+    name: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm"
+    state: present
+    disable_gpg_check: true
+
 - name: Install Remi repository for EL10
   ansible.builtin.dnf:
     name: "https://rpms.remirepo.net/enterprise/remi-release-10.rpm"
