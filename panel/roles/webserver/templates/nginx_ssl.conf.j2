@@ -23,14 +23,9 @@ server {
 
     sendfile off;
 
-    # SSL Configuration
-{% if pelican_ssl_provider | default('certbot') == 'certbot' %}
-    ssl_certificate /etc/letsencrypt/live/{{ pelican_domain }}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/{{ pelican_domain }}/privkey.pem;
-{% else %}
-    ssl_certificate /etc/pki/tls/certs/pelican.crt;
-    ssl_certificate_key /etc/pki/tls/private/pelican.key;
-{% endif %}
+    # SSL Configuration — certificates managed by IDM/certmonger
+    ssl_certificate {{ pelican_ssl_cert }};
+    ssl_certificate_key {{ pelican_ssl_key }};
     ssl_session_cache shared:SSL:10m;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384";

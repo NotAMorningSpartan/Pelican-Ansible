@@ -55,11 +55,12 @@ Skipped entirely when `pelican_ssl_enabled == false`.
 
 | Variable | Default | Description |
 |---|---|---|
-| `pelican_ssl_enabled` | `true` | Enable SSL certificate provisioning |
-| `pelican_ssl_provider` | `"certbot"` | SSL provider (`"certbot"` or `"self_signed"`) |
-| `pelican_ssl_email` | `"admin@example.com"` | Email for Let's Encrypt registration |
+| `pelican_ssl_enabled` | `true` | Enable SSL certificate provisioning via IDM/certmonger |
 | `pelican_domain` | `"panel.example.com"` | Domain for the certificate |
-| `pelican_webserver` | `"nginx"` | Web server (determines certbot plugin) |
+| `pelican_webserver` | `"nginx"` | Web server (restarted by certmonger on renewal) |
+| `pelican_ssl_cert` | `"/etc/pki/tls/certs/<domain>.crt"` | Path to the SSL certificate |
+| `pelican_ssl_key` | `"/etc/pki/tls/private/<domain>.key"` | Path to the SSL private key |
+| `pelican_ssl_principal` | `"HTTP/<domain>"` | IPA Kerberos principal for the certificate request |
 
 ### Webserver Role
 
@@ -68,7 +69,8 @@ Skipped entirely when `pelican_ssl_enabled == false`.
 | `pelican_webserver` | `"nginx"` | Web server to use (`"nginx"` or `"caddy"`) |
 | `pelican_domain` | `"panel.example.com"` | Server name / site address |
 | `pelican_ssl_enabled` | `true` | Deploy SSL or HTTP config template |
-| `pelican_ssl_provider` | `"certbot"` | Determines SSL cert paths in Nginx template |
+| `pelican_ssl_cert` | `"/etc/pki/tls/certs/<domain>.crt"` | SSL certificate path used in templates |
+| `pelican_ssl_key` | `"/etc/pki/tls/private/<domain>.key"` | SSL private key path used in templates |
 | `pelican_install_dir` | `"/var/www/pelican"` | Document root for web server |
 | `pelican_web_user` | `"nginx"` | Web server system user |
 | `pelican_php_version` | `"8.4"` | Used to locate PHP-FPM socket |
@@ -104,10 +106,11 @@ Skipped entirely when `wings_ssl_enabled == false`.
 
 | Variable | Default | Description |
 |---|---|---|
-| `wings_ssl_enabled` | `true` | Enable SSL for Wings |
+| `wings_ssl_enabled` | `true` | Enable SSL for Wings via IDM/certmonger |
 | `wings_ssl_domain` | `"node1.example.com"` | FQDN for the certificate |
-| `wings_ssl_email` | `"admin@example.com"` | Email for Let's Encrypt registration |
-| `wings_ssl_method` | `"standalone"` | Certbot challenge method (`"standalone"` or `"dns"`) |
+| `wings_ssl_cert` | `"/etc/pki/tls/certs/<domain>.crt"` | Path to the SSL certificate |
+| `wings_ssl_key` | `"/etc/pki/tls/private/<domain>.key"` | Path to the SSL private key |
+| `wings_ssl_principal` | `"HTTP/<domain>"` | IPA Kerberos principal for the certificate request |
 
 ### Wings Binary Role
 

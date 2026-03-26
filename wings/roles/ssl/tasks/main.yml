@@ -1,36 +1,49 @@
 ---
-- name: Install certbot
+- name: Ensure certmonger is installed
   ansible.builtin.dnf:
-    name: certbot
+    name: certmonger
     state: present
 
-- name: Request SSL certificate (standalone)
+- name: Ensure certmonger service is running
+  ansible.builtin.systemd_service:
+    name: certmonger
+    state: started
+    enabled: true
+
+- name: Check if certificate is already tracked by certmonger
+  ansible.builtin.command:
+    cmd: "ipa-getcert list -f {{ wings_ssl_cert }}"
+  register: certmonger_check
+  changed_when: false
+  failed_when: false
+
+- name: Request certificate from IDM CA via certmonger
   ansible.builtin.command:
     cmd: >-
-      certbot certonly --standalone
-      -d {{ wings_ssl_domain }}
-      --non-interactive
-      --agree-tos
-      -m {{ wings_ssl_email }}
-    creates: "/etc/letsencrypt/live/{{ wings_ssl_domain }}/fullchain.pem"
-  when: wings_ssl_method == "standalone"
+      ipa-getcert request
+      -K {{ wings_ssl_principal }}
+      -D {{ wings_ssl_domain }}
+      -f {{ wings_ssl_cert }}
+      -k {{ wings_ssl_key }}
+      -C "systemctl restart wings"
+  when: certmonger_check.rc != 0
 
-- name: Request SSL certificate (DNS challenge)
+- name: Wait for certificate to be issued
   ansible.builtin.command:
-    cmd: >-
-      certbot certonly
-      -d {{ wings_ssl_domain }}
-      --manual
-      --preferred-challenges dns
-      --non-interactive
-      --agree-tos
-      -m {{ wings_ssl_email }}
-    creates: "/etc/letsencrypt/live/{{ wings_ssl_domain }}/fullchain.pem"
-  when: wings_ssl_method == "dns"
+    cmd: "ipa-getcert list -f {{ wings_ssl_cert }}"
+  register: cert_status
+  until: "'MONITORING' in cert_status.stdout"
+  retries: 30
+  delay: 10
+  changed_when: false
+  when: certmonger_check.rc != 0
 
-- name: Create cron job for certbot renewal
-  ansible.builtin.cron:
-    name: "Certbot automatic renewal for Wings"
-    minute: "0"
-    hour: "3"
-    job: "certbot renew --quiet --deploy-hook 'systemctl restart wings'"
+- name: Verify certificate file exists
+  ansible.builtin.stat:
+    path: "{{ wings_ssl_cert }}"
+  register: cert_file
+
+- name: Fail if certificate was not issued
+  ansible.builtin.fail:
+    msg: "Certificate was not issued at {{ wings_ssl_cert }}. Check 'ipa-getcert list' and IDM CA status."
+  when: not cert_file.stat.exists

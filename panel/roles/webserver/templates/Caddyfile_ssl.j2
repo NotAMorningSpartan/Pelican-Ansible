@@ -6,6 +6,9 @@
 
     file_server
 
+    # SSL — certificates managed by IDM/certmonger
+    tls {{ pelican_ssl_cert }} {{ pelican_ssl_key }}
+
     php_fastcgi unix//run/php-fpm/www.sock {
         env HTTPS "on"
         read_timeout 300s
