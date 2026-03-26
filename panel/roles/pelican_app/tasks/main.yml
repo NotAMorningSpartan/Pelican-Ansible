@@ -31,7 +31,7 @@
 
 - name: Install Composer dependencies
   ansible.builtin.command:
-    cmd: "composer install --no-dev --optimize-autoloader"
+    cmd: "/usr/local/bin/composer install --no-dev --optimize-autoloader"
     chdir: "{{ pelican_install_dir }}"
     creates: "{{ pelican_install_dir }}/vendor/autoload.php"
   environment:
