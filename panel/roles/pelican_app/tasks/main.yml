@@ -37,11 +37,33 @@
   environment:
     COMPOSER_ALLOW_SUPERUSER: "1"
 
-- name: Run Pelican environment setup
+- name: Check if .env file exists
+  ansible.builtin.stat:
+    path: "{{ pelican_install_dir }}/.env"
+  register: env_file
+
+- name: Copy .env.example to .env
+  ansible.builtin.copy:
+    src: "{{ pelican_install_dir }}/.env.example"
+    dest: "{{ pelican_install_dir }}/.env"
+    remote_src: true
+    owner: "{{ pelican_web_user }}"
+    group: "{{ pelican_web_user }}"
+    mode: "0640"
+  when: not env_file.stat.exists
+
+- name: Check if APP_KEY is set
   ansible.builtin.command:
-    cmd: "php artisan p:environment:setup"
+    cmd: "grep '^APP_KEY=base64:' {{ pelican_install_dir }}/.env"
+  register: app_key_check
+  changed_when: false
+  failed_when: false
+
+- name: Generate APP_KEY
+  ansible.builtin.command:
+    cmd: "php artisan key:generate --force"
     chdir: "{{ pelican_install_dir }}"
-    creates: "{{ pelican_install_dir }}/.env"
+  when: app_key_check.rc != 0
 
 - name: Read APP_KEY from .env file
   ansible.builtin.command:
