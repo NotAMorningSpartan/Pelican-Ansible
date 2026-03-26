@@ -9,7 +9,7 @@ These playbooks automate the full installation stack: PHP (via Remi), Composer, 
 - **Control node:** Ansible 2.16+ with Python 3
 - **Target hosts:** RHEL 10 (or compatible) with SSH access and a user with sudo privileges
 - **DNS:** A and/or AAAA records pointing your Panel and Wings domains to the target servers
-- **Network:** Ports 80 and 443 reachable for Let's Encrypt validation (if using certbot)
+- **Red Hat IDM:** Target hosts must be IPA-enrolled (ipa-client installed and configured) for certificate provisioning via certmonger
 
 ## Quick Start
 
@@ -42,7 +42,6 @@ Edit `inventories/panel/group_vars/all.yml` with your environment settings:
 
 ```yaml
 pelican_domain: "panel.example.com"
-pelican_ssl_email: "admin@example.com"
 pelican_db_engine: "sqlite"
 ```
 
@@ -58,7 +57,6 @@ Edit `inventories/wings/hosts.yml` and `inventories/wings/group_vars/all.yml`:
 
 ```yaml
 wings_ssl_domain: "node1.example.com"
-wings_ssl_email: "admin@example.com"
 ```
 
 ### 6. Run the Wings playbook
@@ -77,8 +75,8 @@ See [docs/VARIABLES.md](docs/VARIABLES.md) for the complete reference.
 |---|---|---|
 | `pelican_webserver` | `"nginx"` | `"nginx"` or `"caddy"` |
 | `pelican_domain` | `"panel.example.com"` | Panel FQDN |
-| `pelican_ssl_enabled` | `true` | Enable SSL |
-| `pelican_ssl_provider` | `"certbot"` | `"certbot"` or `"self_signed"` |
+| `pelican_ssl_enabled` | `true` | Enable SSL via IDM/certmonger |
+| `pelican_ssl_principal` | `"HTTP/<domain>"` | IPA Kerberos principal for the certificate |
 | `pelican_db_engine` | `"sqlite"` | `"sqlite"`, `"mysql"`, `"mariadb"`, or `"postgresql"` |
 | `pelican_db_password` | `"CHANGE_ME"` | Database password (vault-encrypt!) |
 | `pelican_redis_enabled` | `false` | Enable Redis |
@@ -90,7 +88,7 @@ See [docs/VARIABLES.md](docs/VARIABLES.md) for the complete reference.
 | Variable | Default | Description |
 |---|---|---|
 | `wings_ssl_domain` | `"node1.example.com"` | Node FQDN |
-| `wings_ssl_method` | `"standalone"` | `"standalone"` or `"dns"` |
+| `wings_ssl_principal` | `"HTTP/<domain>"` | IPA Kerberos principal for the certificate |
 | `wings_architecture` | `"amd64"` | `"amd64"` or `"arm64"` |
 | `wings_version` | `"latest"` | `"latest"` or a specific release tag |
 | `wings_docker_enable_swap` | `false` | Enable swap accounting (requires reboot) |
@@ -102,10 +100,9 @@ See [docs/VARIABLES.md](docs/VARIABLES.md) for the complete reference.
 ```yaml
 # inventories/panel/group_vars/all.yml
 pelican_domain: "panel.example.com"
-pelican_ssl_email: "admin@example.com"
 ```
 
-All other defaults apply: Nginx, certbot SSL, SQLite, no Redis.
+All other defaults apply: Nginx, IDM CA SSL, SQLite, no Redis. Host must be IPA-enrolled.
 
 ### Panel with Caddy + SSL + MariaDB + Redis (full stack)
 
@@ -113,7 +110,6 @@ All other defaults apply: Nginx, certbot SSL, SQLite, no Redis.
 # inventories/panel/group_vars/all.yml
 pelican_webserver: "caddy"
 pelican_domain: "panel.example.com"
-pelican_ssl_email: "admin@example.com"
 pelican_db_engine: "mariadb"
 pelican_db_password: !vault |
   $ANSIBLE_VAULT;1.1;AES256
@@ -126,7 +122,6 @@ pelican_redis_enabled: true
 ```yaml
 # inventories/wings/group_vars/all.yml
 wings_ssl_domain: "node1.example.com"
-wings_ssl_email: "admin@example.com"
 ```
 
 For ARM64 nodes:
@@ -172,19 +167,21 @@ ausearch -m AVC -ts recent
 restorecon -Rv /var/www/pelican
 ```
 
-### Certbot certificate request fails
+### IDM certificate not issued
 
-Ensure DNS points to the server and ports 80/443 are reachable:
+Check certmonger tracking status and IDM CA connectivity:
 
 ```bash
-firewall-cmd --list-ports
-curl -I http://<domain>
+ipa-getcert list
+# Look for status: MONITORING (success) or CA_UNREACHABLE / NEED_GUIDANCE
+ipa-getcert resubmit -f /etc/pki/tls/certs/<domain>.crt
 ```
 
-For Wings standalone certbot, ensure no other service is listening on port 80:
+Ensure the host is properly IPA-enrolled:
 
 ```bash
-ss -tlnp | grep :80
+ipa-client-install --help  # if not yet enrolled
+klist -k /etc/krb5.keytab  # verify keytab exists
 ```
 
 ### Wings won't connect to Panel
@@ -246,7 +243,7 @@ pelican-ansible/
 │       ├── composer/      # Composer binary
 │       ├── database/      # MySQL, MariaDB, or PostgreSQL
 │       ├── redis/         # Optional Redis
-│       ├── ssl/           # Certbot or self-signed certificates
+│       ├── ssl/           # IDM/certmonger certificate provisioning
 │       ├── webserver/     # Nginx or Caddy
 │       └── pelican_app/   # Panel download and setup
 ├── wings/
@@ -254,7 +251,7 @@ pelican-ansible/
 │   └── roles/
 │       ├── common/        # Base packages, SELinux, firewall
 │       ├── docker/        # Docker CE
-│       ├── ssl/           # Certbot certificates
+│       ├── ssl/           # IDM/certmonger certificate provisioning
 │       └── wings_binary/  # Wings daemon
 └── docs/
     ├── VARIABLES.md

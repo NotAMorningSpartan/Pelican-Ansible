@@ -1,8 +1,49 @@
 ---
-- name: Include certbot SSL tasks
-  ansible.builtin.include_tasks: certbot.yml
-  when: pelican_ssl_provider == "certbot"
+- name: Ensure certmonger is installed
+  ansible.builtin.dnf:
+    name: certmonger
+    state: present
 
-- name: Include self-signed SSL tasks
-  ansible.builtin.include_tasks: self_signed.yml
-  when: pelican_ssl_provider == "self_signed"
+- name: Ensure certmonger service is running
+  ansible.builtin.systemd_service:
+    name: certmonger
+    state: started
+    enabled: true
+
+- name: Check if certificate is already tracked by certmonger
+  ansible.builtin.command:
+    cmd: "ipa-getcert list -f {{ pelican_ssl_cert }}"
+  register: certmonger_check
+  changed_when: false
+  failed_when: false
+
+- name: Request certificate from IDM CA via certmonger
+  ansible.builtin.command:
+    cmd: >-
+      ipa-getcert request
+      -K {{ pelican_ssl_principal }}
+      -D {{ pelican_domain }}
+      -f {{ pelican_ssl_cert }}
+      -k {{ pelican_ssl_key }}
+      -C "systemctl restart {{ pelican_webserver }}"
+  when: certmonger_check.rc != 0
+
+- name: Wait for certificate to be issued
+  ansible.builtin.command:
+    cmd: "ipa-getcert list -f {{ pelican_ssl_cert }}"
+  register: cert_status
+  until: "'MONITORING' in cert_status.stdout"
+  retries: 30
+  delay: 10
+  changed_when: false
+  when: certmonger_check.rc != 0
+
+- name: Verify certificate file exists
+  ansible.builtin.stat:
+    path: "{{ pelican_ssl_cert }}"
+  register: cert_file
+
+- name: Fail if certificate was not issued
+  ansible.builtin.fail:
+    msg: "Certificate was not issued at {{ pelican_ssl_cert }}. Check 'ipa-getcert list' and IDM CA status."
+  when: not cert_file.stat.exists

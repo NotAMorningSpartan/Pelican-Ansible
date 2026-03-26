@@ -1,5 +1,10 @@
 ---
 wings_ssl_enabled: true
 wings_ssl_domain: "node1.example.com"
-wings_ssl_email: "admin@example.com"
-wings_ssl_method: "standalone"
+
+# Certificate paths (managed by certmonger/IPA)
+wings_ssl_cert: "/etc/pki/tls/certs/{{ wings_ssl_domain }}.crt"
+wings_ssl_key: "/etc/pki/tls/private/{{ wings_ssl_domain }}.key"
+
+# IPA principal for the certificate
+wings_ssl_principal: "HTTP/{{ wings_ssl_domain }}"

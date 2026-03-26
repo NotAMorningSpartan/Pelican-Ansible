@@ -11,11 +11,12 @@
 # wings_docker_channel: "stable"
 # wings_docker_enable_swap: false
 
-# ── SSL ──
+# ── SSL (IDM/certmonger) ──
 # wings_ssl_enabled: true
 # wings_ssl_domain: "node1.example.com"
-# wings_ssl_email: "admin@example.com"
-# wings_ssl_method: "standalone"
+# wings_ssl_cert: "/etc/pki/tls/certs/node1.example.com.crt"
+# wings_ssl_key: "/etc/pki/tls/private/node1.example.com.key"
+# wings_ssl_principal: "HTTP/node1.example.com"
 
 # ── Firewall ──
 # wings_firewall_ports:

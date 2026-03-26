@@ -82,3 +82,26 @@ This is distinct from the CentOS URL (`/linux/centos/`). Using the wrong URL may
 ## 7. PHP-FPM Socket Path
 
 On RHEL, the PHP-FPM socket is located at `/run/php-fpm/www.sock` (not `/run/php/php8.x-fpm.sock` as on Debian). All web server templates in this project use the RHEL path. If you are adapting templates from Debian-based guides, update the socket path accordingly.
+
+## 8. SSL Certificates via Red Hat IDM (certmonger)
+
+These playbooks use `ipa-getcert` (certmonger) to request SSL certificates from a Red Hat Identity Management (IDM/FreeIPA) certificate authority. This requires:
+
+- **Target hosts must be IPA-enrolled** (`ipa-client-install` completed) before running the playbooks
+- **The IDM CA must be operational** and reachable from the target hosts
+- **HTTP service principals** (e.g. `HTTP/panel.example.com`) will be created automatically by `ipa-getcert request`
+
+Certmonger handles automatic renewal — no cron jobs needed. Certificates are placed in `/etc/pki/tls/certs/` and `/etc/pki/tls/private/` by default.
+
+To check certificate status after deployment:
+
+```bash
+ipa-getcert list
+# Status should show: MONITORING
+```
+
+To manually resubmit a failed request:
+
+```bash
+ipa-getcert resubmit -f /etc/pki/tls/certs/<domain>.crt
+```

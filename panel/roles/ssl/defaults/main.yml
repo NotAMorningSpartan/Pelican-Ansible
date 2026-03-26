@@ -1,6 +1,11 @@
 ---
 pelican_ssl_enabled: true
-pelican_ssl_provider: "certbot"
-pelican_ssl_email: "admin@example.com"
 pelican_domain: "panel.example.com"
 pelican_webserver: "nginx"
+
+# Certificate paths (managed by certmonger/IPA)
+pelican_ssl_cert: "/etc/pki/tls/certs/{{ pelican_domain }}.crt"
+pelican_ssl_key: "/etc/pki/tls/private/{{ pelican_domain }}.key"
+
+# IPA principal for the certificate (HTTP/<fqdn>@REALM is typical)
+pelican_ssl_principal: "HTTP/{{ pelican_domain }}"
