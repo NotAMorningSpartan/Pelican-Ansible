@@ -30,7 +30,7 @@
   when: not (pelican_ssl_enabled | default(true))
   notify: Reload nginx
 
-- name: Set SELinux file context on Pelican install directory
+- name: Register SELinux file context for Pelican install directory
   ansible.builtin.command:
     cmd: >-
       semanage fcontext -a -t httpd_sys_rw_content_t
@@ -40,12 +40,6 @@
   failed_when:
     - semanage_result.rc != 0
     - "'already defined' not in semanage_result.stderr"
-
-- name: Apply SELinux file context with restorecon
-  ansible.builtin.command:
-    cmd: "restorecon -Rv {{ pelican_install_dir }}"
-  register: restorecon_result
-  changed_when: restorecon_result.stdout | length > 0
 
 - name: Enable and start Nginx
   ansible.builtin.systemd_service:

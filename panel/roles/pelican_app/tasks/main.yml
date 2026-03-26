@@ -7,6 +7,12 @@
     group: "{{ pelican_web_user }}"
     mode: "0755"
 
+- name: Apply SELinux file context with restorecon
+  ansible.builtin.command:
+    cmd: "restorecon -Rv {{ pelican_install_dir }}"
+  register: restorecon_result
+  changed_when: restorecon_result.stdout | length > 0
+
 - name: Set Pelican download URL
   ansible.builtin.set_fact:
     pelican_tarball_url: >-
