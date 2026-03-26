@@ -1,6 +1,6 @@
 # Pelican Panel & Wings — Ansible Playbooks
 
-Ansible playbooks for automated installation of **Pelican Panel** and **Pelican Wings** on RHEL 10 systems.
+Ansible playbooks for automated installation of [**Pelican Panel**](https://github.com/pelican-dev/panel) and [**Pelican Wings**](https://github.com/pelican-dev/wings) on RHEL 10 systems.
 
 These playbooks automate the full installation stack: PHP (via Remi), Composer, Nginx or Caddy, optional database (MySQL/MariaDB/PostgreSQL), optional Redis, SSL certificates, Docker CE, and the Wings daemon — all configured for SELinux enforcing mode and firewalld.
 
