@@ -1,0 +1,22 @@
+---
+- name: Update Pelican Wings
+  hosts: all
+  become: true
+  gather_facts: false
+
+  vars_files:
+    - roles/wings_binary/defaults/main.yml
+
+  tasks:
+    - name: Verify Wings is installed
+      ansible.builtin.stat:
+        path: "{{ wings_binary_path }}"
+      register: wings_check
+
+    - name: Fail if Wings is not installed
+      ansible.builtin.fail:
+        msg: "Wings is not installed at {{ wings_binary_path }}. Run site.yml first."
+      when: not wings_check.stat.exists
+
+    - name: Include update tasks
+      ansible.builtin.include_tasks: roles/wings_binary/tasks/update.yml

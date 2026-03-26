@@ -1,4 +1,4 @@
-.PHONY: lint validate-panel validate-wings install-collections all
+.PHONY: lint validate-panel validate-wings install-collections all update-panel update-wings
 
 all: install-collections lint
 
@@ -14,3 +14,9 @@ validate-panel:
 
 validate-wings:
 	ansible-playbook wings/tests/validate.yml -i inventories/wings/hosts.yml
+
+update-panel:
+	ansible-playbook panel/update.yml -i inventories/panel/hosts.yml
+
+update-wings:
+	ansible-playbook wings/update.yml -i inventories/wings/hosts.yml
