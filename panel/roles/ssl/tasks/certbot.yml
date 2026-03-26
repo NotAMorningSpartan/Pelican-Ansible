@@ -1,0 +1,36 @@
+---
+- name: Install certbot and Nginx plugin
+  ansible.builtin.dnf:
+    name:
+      - certbot
+      - python3-certbot-nginx
+    state: present
+  when: pelican_webserver == "nginx"
+
+- name: Install certbot (standalone for Caddy)
+  ansible.builtin.dnf:
+    name: certbot
+    state: present
+  when: pelican_webserver != "nginx"
+
+- name: Set certbot plugin fact
+  ansible.builtin.set_fact:
+    certbot_plugin: "{{ 'nginx' if pelican_webserver == 'nginx' else 'standalone' }}"
+
+- name: Request SSL certificate from Let's Encrypt
+  ansible.builtin.command:
+    cmd: >-
+      certbot certonly
+      --{{ certbot_plugin }}
+      -d {{ pelican_domain }}
+      --non-interactive
+      --agree-tos
+      -m {{ pelican_ssl_email }}
+    creates: "/etc/letsencrypt/live/{{ pelican_domain }}/fullchain.pem"
+
+- name: Create cron job for certbot renewal
+  ansible.builtin.cron:
+    name: "Certbot automatic renewal"
+    minute: "0"
+    hour: "3"
+    job: "certbot renew --quiet --deploy-hook 'systemctl restart {{ pelican_webserver }}'"

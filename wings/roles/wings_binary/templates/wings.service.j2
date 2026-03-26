@@ -1,0 +1,21 @@
+# {{ ansible_managed }}
+
+[Unit]
+Description=Wings Daemon
+After=docker.service
+Requires=docker.service
+PartOf=docker.service
+
+[Service]
+User=root
+WorkingDirectory={{ wings_config_dir }}
+LimitNOFILE=4096
+PIDFile={{ wings_pid_dir }}/daemon.pid
+ExecStart={{ wings_binary_path }}
+Restart=on-failure
+StartLimitInterval=180
+StartLimitBurst=30
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

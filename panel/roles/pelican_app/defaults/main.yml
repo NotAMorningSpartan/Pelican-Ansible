@@ -1,0 +1,4 @@
+---
+pelican_install_dir: "/var/www/pelican"
+pelican_app_version: "latest"
+pelican_web_user: "nginx"

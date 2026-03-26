@@ -1,0 +1,54 @@
+---
+- name: Create Wings configuration directory
+  ansible.builtin.file:
+    path: "{{ wings_config_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Create Wings PID directory
+  ansible.builtin.file:
+    path: "{{ wings_pid_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Set Wings download URL
+  ansible.builtin.set_fact:
+    wings_download_url: >-
+      {{ (wings_version == 'latest')
+         | ternary(
+             'https://github.com/pelican-dev/wings/releases/latest/download/wings_linux_' ~ wings_architecture,
+             'https://github.com/pelican-dev/wings/releases/download/v' ~ wings_version ~ '/wings_linux_' ~ wings_architecture
+           ) }}
+
+- name: Download Wings binary
+  ansible.builtin.get_url:
+    url: "{{ wings_download_url }}"
+    dest: "{{ wings_binary_path }}"
+    mode: "0755"
+
+- name: Template Wings systemd unit file
+  ansible.builtin.template:
+    src: wings.service.j2
+    dest: /etc/systemd/system/wings.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart wings
+
+- name: Enable and start Wings service
+  ansible.builtin.systemd_service:
+    name: wings
+    state: started
+    enabled: true
+
+- name: Display post-installation instructions
+  ansible.builtin.debug:
+    msg: >-
+      Wings has been installed and started. To complete setup:
+      1. Create a node in the Pelican Panel web UI.
+      2. Copy the configuration YAML from the Configuration tab
+         to {{ wings_config_dir }}/config.yml on this node.
+      3. Alternatively, use the Auto Deploy Command from the Panel.
+      4. Then restart Wings: systemctl restart wings

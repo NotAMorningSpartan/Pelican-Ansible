@@ -1,0 +1,10 @@
+---
+collections:
+  - name: ansible.posix
+    version: ">=1.5.0"
+  # Required only when pelican_db_engine is mysql or mariadb
+  - name: community.mysql
+    version: ">=3.9.0"
+  # Required only when pelican_db_engine is postgresql
+  - name: community.postgresql
+    version: ">=3.4.0"

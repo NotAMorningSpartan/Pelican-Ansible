@@ -1,0 +1,26 @@
+---
+- name: Download Composer installer
+  ansible.builtin.get_url:
+    url: "https://getcomposer.org/installer"
+    dest: /tmp/composer-setup.php
+    mode: "0644"
+
+- name: Run Composer installer
+  ansible.builtin.command:
+    cmd: "php /tmp/composer-setup.php --install-dir={{ composer_install_path | dirname }} --filename={{ composer_install_path | basename }}"
+    creates: "{{ composer_install_path }}"
+
+- name: Remove Composer installer script
+  ansible.builtin.file:
+    path: /tmp/composer-setup.php
+    state: absent
+
+- name: Verify Composer installation
+  ansible.builtin.command:
+    cmd: "{{ composer_install_path }} --version"
+  register: composer_version_output
+  changed_when: false
+
+- name: Display Composer version
+  ansible.builtin.debug:
+    msg: "{{ composer_version_output.stdout }}"

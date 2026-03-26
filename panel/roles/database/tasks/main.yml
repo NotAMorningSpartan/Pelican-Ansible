@@ -1,0 +1,3 @@
+---
+- name: Include database tasks for {{ pelican_db_engine }}
+  ansible.builtin.include_tasks: "{{ pelican_db_engine }}.yml"

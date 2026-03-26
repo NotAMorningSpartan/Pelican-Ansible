@@ -1,0 +1,166 @@
+---
+- name: Validate Pelican Panel Installation
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    # ── PHP ──
+    - name: Check PHP version
+      ansible.builtin.command:
+        cmd: php -r "echo PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;"
+      register: php_version_check
+      changed_when: false
+
+    - name: Verify PHP version matches expected
+      ansible.builtin.assert:
+        that:
+          - php_version_check.stdout == pelican_php_version | default('8.4')
+        fail_msg: "PHP version mismatch: expected {{ pelican_php_version | default('8.4') }}, got {{ php_version_check.stdout }}"
+        success_msg: "PHP version {{ php_version_check.stdout }} matches expected"
+
+    - name: Check php-fpm service is running
+      ansible.builtin.command:
+        cmd: systemctl is-active php-fpm
+      register: phpfpm_status
+      changed_when: false
+
+    - name: Verify php-fpm is active
+      ansible.builtin.assert:
+        that:
+          - phpfpm_status.stdout == "active"
+        fail_msg: "php-fpm is not running: {{ phpfpm_status.stdout }}"
+        success_msg: "php-fpm is running"
+
+    # ── Web Server ──
+    - name: Check webserver service is running
+      ansible.builtin.command:
+        cmd: "systemctl is-active {{ pelican_webserver | default('nginx') }}"
+      register: webserver_status
+      changed_when: false
+
+    - name: Verify webserver is active
+      ansible.builtin.assert:
+        that:
+          - webserver_status.stdout == "active"
+        fail_msg: "{{ pelican_webserver | default('nginx') }} is not running: {{ webserver_status.stdout }}"
+        success_msg: "{{ pelican_webserver | default('nginx') }} is running"
+
+    - name: Check webserver responds on port 80
+      ansible.builtin.uri:
+        url: "http://localhost"
+        status_code: [200, 301, 302, 403]
+        validate_certs: false
+      register: http_check
+
+    - name: Verify HTTP response
+      ansible.builtin.assert:
+        that:
+          - http_check.status in [200, 301, 302, 403]
+        success_msg: "Web server responds on port 80 (status {{ http_check.status }})"
+
+    - name: Check webserver responds on port 443
+      ansible.builtin.uri:
+        url: "https://localhost"
+        status_code: [200, 301, 302, 403]
+        validate_certs: false
+      register: https_check
+      when: pelican_ssl_enabled | default(true)
+
+    - name: Verify HTTPS response
+      ansible.builtin.assert:
+        that:
+          - https_check.status in [200, 301, 302, 403]
+        success_msg: "Web server responds on port 443 (status {{ https_check.status }})"
+      when: pelican_ssl_enabled | default(true)
+
+    # ── Pelican Application ──
+    - name: Check Pelican install directory exists
+      ansible.builtin.stat:
+        path: "{{ pelican_install_dir | default('/var/www/pelican') }}"
+      register: install_dir_stat
+
+    - name: Verify install directory exists and has correct ownership
+      ansible.builtin.assert:
+        that:
+          - install_dir_stat.stat.exists
+          - install_dir_stat.stat.isdir
+          - install_dir_stat.stat.pw_name == pelican_web_user | default('nginx')
+        fail_msg: "Install directory missing or wrong ownership (owner: {{ install_dir_stat.stat.pw_name | default('N/A') }})"
+        success_msg: "Install directory exists and is owned by {{ pelican_web_user | default('nginx') }}"
+
+    - name: Check .env file exists
+      ansible.builtin.stat:
+        path: "{{ pelican_install_dir | default('/var/www/pelican') }}/.env"
+      register: env_file_stat
+
+    - name: Verify .env file exists
+      ansible.builtin.assert:
+        that:
+          - env_file_stat.stat.exists
+        fail_msg: ".env file not found at {{ pelican_install_dir | default('/var/www/pelican') }}/.env"
+        success_msg: ".env file exists"
+
+    # ── Database ──
+    - name: Check MySQL/MariaDB connectivity
+      ansible.builtin.command:
+        cmd: >-
+          php -r "new PDO('mysql:host={{ pelican_db_host | default('127.0.0.1') }};
+          port={{ pelican_db_port | default(3306) }};
+          dbname={{ pelican_db_name | default('pelican') }}',
+          '{{ pelican_db_user | default('pelican') }}',
+          '{{ pelican_db_password | default('CHANGE_ME') }}');
+          echo 'OK';"
+      register: mysql_check
+      changed_when: false
+      when: pelican_db_engine | default('sqlite') in ['mysql', 'mariadb']
+
+    - name: Verify MySQL/MariaDB connectivity
+      ansible.builtin.assert:
+        that:
+          - "'OK' in mysql_check.stdout"
+        fail_msg: "Cannot connect to {{ pelican_db_engine }} database"
+        success_msg: "{{ pelican_db_engine }} database connection successful"
+      when: pelican_db_engine | default('sqlite') in ['mysql', 'mariadb']
+
+    - name: Check PostgreSQL connectivity
+      ansible.builtin.command:
+        cmd: >-
+          php -r "new PDO('pgsql:host={{ pelican_db_host | default('127.0.0.1') }};
+          port={{ pelican_db_port | default(5432) }};
+          dbname={{ pelican_db_name | default('pelican') }}',
+          '{{ pelican_db_user | default('pelican') }}',
+          '{{ pelican_db_password | default('CHANGE_ME') }}');
+          echo 'OK';"
+      register: pgsql_check
+      changed_when: false
+      when: pelican_db_engine | default('sqlite') == 'postgresql'
+
+    - name: Verify PostgreSQL connectivity
+      ansible.builtin.assert:
+        that:
+          - "'OK' in pgsql_check.stdout"
+        fail_msg: "Cannot connect to PostgreSQL database"
+        success_msg: "PostgreSQL database connection successful"
+      when: pelican_db_engine | default('sqlite') == 'postgresql'
+
+    # ── Redis ──
+    - name: Check Redis connectivity
+      ansible.builtin.command:
+        cmd: redis-cli -h {{ pelican_redis_bind | default('127.0.0.1') }} -p {{ pelican_redis_port | default(6379) }} ping
+      register: redis_check
+      changed_when: false
+      when: pelican_redis_enabled | default(false)
+
+    - name: Verify Redis connectivity
+      ansible.builtin.assert:
+        that:
+          - redis_check.stdout == "PONG"
+        fail_msg: "Redis is not responding (got: {{ redis_check.stdout | default('no response') }})"
+        success_msg: "Redis is responding"
+      when: pelican_redis_enabled | default(false)
+
+    # ── Summary ──
+    - name: Panel validation complete
+      ansible.builtin.debug:
+        msg: "All Pelican Panel validation checks passed."

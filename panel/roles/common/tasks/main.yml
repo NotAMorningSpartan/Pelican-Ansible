@@ -1,0 +1,33 @@
+---
+- name: Install base packages
+  ansible.builtin.dnf:
+    name: "{{ pelican_base_packages }}"
+    state: present
+
+- name: Set SELinux booleans
+  ansible.posix.seboolean:
+    name: "{{ item }}"
+    state: true
+    persistent: true
+  loop: "{{ pelican_selinux_booleans }}"
+
+- name: Set SELinux boolean for database network access
+  ansible.posix.seboolean:
+    name: httpd_can_network_connect_db
+    state: true
+    persistent: true
+  when: pelican_db_engine | default('sqlite') != "sqlite"
+
+- name: Ensure firewalld service is running and enabled
+  ansible.builtin.systemd_service:
+    name: firewalld
+    state: started
+    enabled: true
+
+- name: Open firewall ports
+  ansible.posix.firewalld:
+    port: "{{ item }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  loop: "{{ pelican_firewall_ports }}"

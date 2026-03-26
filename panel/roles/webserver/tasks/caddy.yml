@@ -1,0 +1,40 @@
+---
+- name: Add Caddy COPR repository
+  ansible.builtin.yum_repository:
+    name: caddy
+    description: Caddy Web Server
+    baseurl: "https://download.copr.fedorainfracloud.org/results/@caddy/caddy/epel-$releasever-$basearch/"
+    gpgcheck: true
+    gpgkey: "https://download.copr.fedorainfracloud.org/results/@caddy/caddy/pubkey.gpg"
+    enabled: true
+
+- name: Install Caddy
+  ansible.builtin.dnf:
+    name: caddy
+    state: present
+
+- name: Deploy Pelican Caddyfile (SSL)
+  ansible.builtin.template:
+    src: Caddyfile_ssl.j2
+    dest: /etc/caddy/Caddyfile
+    owner: root
+    group: caddy
+    mode: "0644"
+  when: pelican_ssl_enabled | default(true)
+  notify: Reload caddy
+
+- name: Deploy Pelican Caddyfile (HTTP)
+  ansible.builtin.template:
+    src: Caddyfile_http.j2
+    dest: /etc/caddy/Caddyfile
+    owner: root
+    group: caddy
+    mode: "0644"
+  when: not (pelican_ssl_enabled | default(true))
+  notify: Reload caddy
+
+- name: Enable and start Caddy
+  ansible.builtin.systemd_service:
+    name: caddy
+    state: started
+    enabled: true

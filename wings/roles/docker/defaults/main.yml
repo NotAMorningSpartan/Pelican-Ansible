@@ -1,0 +1,4 @@
+---
+wings_docker_edition: "ce"
+wings_docker_channel: "stable"
+wings_docker_enable_swap: false

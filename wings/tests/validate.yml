@@ -1,0 +1,82 @@
+---
+- name: Validate Pelican Wings Installation
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    # ── Docker ──
+    - name: Check Docker is running
+      ansible.builtin.command:
+        cmd: docker info
+      register: docker_info
+      changed_when: false
+
+    - name: Verify Docker is operational
+      ansible.builtin.assert:
+        that:
+          - docker_info.rc == 0
+        fail_msg: "Docker is not running or not operational"
+        success_msg: "Docker is running"
+
+    # ── Wings Binary ──
+    - name: Check Wings binary exists
+      ansible.builtin.stat:
+        path: "{{ wings_binary_path | default('/usr/local/bin/wings') }}"
+      register: wings_binary_stat
+
+    - name: Verify Wings binary exists and is executable
+      ansible.builtin.assert:
+        that:
+          - wings_binary_stat.stat.exists
+          - wings_binary_stat.stat.executable
+        fail_msg: "Wings binary not found or not executable at {{ wings_binary_path | default('/usr/local/bin/wings') }}"
+        success_msg: "Wings binary exists and is executable"
+
+    # ── Wings Service ──
+    - name: Check Wings systemd service is active
+      ansible.builtin.command:
+        cmd: systemctl is-active wings
+      register: wings_status
+      changed_when: false
+
+    - name: Verify Wings service is active
+      ansible.builtin.assert:
+        that:
+          - wings_status.stdout == "active"
+        fail_msg: "Wings service is not running: {{ wings_status.stdout }}"
+        success_msg: "Wings service is running"
+
+    # ── Firewall Ports ──
+    - name: Get list of open firewall ports
+      ansible.builtin.command:
+        cmd: firewall-cmd --list-ports
+      register: open_ports
+      changed_when: false
+
+    - name: Verify required firewall ports are open
+      ansible.builtin.assert:
+        that:
+          - item in open_ports.stdout
+        fail_msg: "Firewall port {{ item }} is not open"
+        success_msg: "Firewall port {{ item }} is open"
+      loop: "{{ wings_firewall_ports | default(['8080/tcp', '2022/tcp', '443/tcp']) }}"
+
+    # ── Configuration ──
+    - name: Check Wings configuration directory exists
+      ansible.builtin.stat:
+        path: "{{ wings_config_dir | default('/etc/pelican') }}"
+      register: wings_config_stat
+
+    - name: Verify Wings configuration directory exists
+      ansible.builtin.assert:
+        that:
+          - wings_config_stat.stat.exists
+          - wings_config_stat.stat.isdir
+        fail_msg: "Wings config directory not found at {{ wings_config_dir | default('/etc/pelican') }}"
+        success_msg: "Wings configuration directory exists"
+
+    # ── Summary ──
+    - name: Wings validation complete
+      ansible.builtin.debug:
+        msg: "All Pelican Wings validation checks passed."

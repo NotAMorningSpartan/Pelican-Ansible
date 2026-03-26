@@ -1,0 +1,49 @@
+---
+- name: Install Nginx
+  ansible.builtin.dnf:
+    name: nginx
+    state: present
+
+- name: Remove default Nginx configuration
+  ansible.builtin.file:
+    path: /etc/nginx/conf.d/default.conf
+    state: absent
+  notify: Reload nginx
+
+- name: Deploy Pelican Nginx configuration (SSL)
+  ansible.builtin.template:
+    src: nginx_ssl.conf.j2
+    dest: /etc/nginx/conf.d/pelican.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: pelican_ssl_enabled | default(true)
+  notify: Reload nginx
+
+- name: Deploy Pelican Nginx configuration (HTTP)
+  ansible.builtin.template:
+    src: nginx_http.conf.j2
+    dest: /etc/nginx/conf.d/pelican.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: not (pelican_ssl_enabled | default(true))
+  notify: Reload nginx
+
+- name: Set SELinux file context on Pelican install directory
+  ansible.posix.sefcontext:
+    target: "{{ pelican_install_dir }}(/.*)?"
+    setype: httpd_sys_rw_content_t
+    state: present
+
+- name: Apply SELinux file context with restorecon
+  ansible.builtin.command:
+    cmd: "restorecon -Rv {{ pelican_install_dir }}"
+  register: restorecon_result
+  changed_when: restorecon_result.stdout | length > 0
+
+- name: Enable and start Nginx
+  ansible.builtin.systemd_service:
+    name: nginx
+    state: started
+    enabled: true

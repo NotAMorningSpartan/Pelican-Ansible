@@ -1,0 +1,31 @@
+---
+- name: Install MariaDB server
+  ansible.builtin.dnf:
+    name: mariadb-server
+    state: present
+
+- name: Enable and start MariaDB service
+  ansible.builtin.systemd_service:
+    name: mariadb
+    state: started
+    enabled: true
+
+- name: Install PyMySQL Python library
+  ansible.builtin.dnf:
+    name: python3-PyMySQL
+    state: present
+
+- name: Create Pelican database
+  community.mysql.mysql_db:
+    name: "{{ pelican_db_name }}"
+    state: present
+    login_unix_socket: /var/lib/mysql/mysql.sock
+
+- name: Create Pelican database user
+  community.mysql.mysql_user:
+    name: "{{ pelican_db_user }}"
+    password: "{{ pelican_db_password }}"
+    priv: "{{ pelican_db_name }}.*:ALL"
+    host: "{{ pelican_db_host }}"
+    state: present
+    login_unix_socket: /var/lib/mysql/mysql.sock

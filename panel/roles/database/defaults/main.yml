@@ -1,0 +1,7 @@
+---
+pelican_db_engine: "sqlite"
+pelican_db_name: "pelican"
+pelican_db_user: "pelican"
+pelican_db_password: "CHANGE_ME"
+pelican_db_host: "127.0.0.1"
+pelican_db_port: 3306
